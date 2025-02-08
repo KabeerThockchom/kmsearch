@@ -30,3 +30,13 @@ Generative AI search with real-time user experience and multi query reasoning
     ```bash
     npm run dev
     ```
+
+## Setup ENV Variables
+
+1. Create .env file
+
+2. Setup ENV Variables:
+
+    AZURE_OPENAI_API_KEY=
+    AZURE_API_VERSION=
+    AZURE_ENDPOINT=

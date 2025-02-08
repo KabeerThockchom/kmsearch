@@ -65,6 +65,10 @@ def stream_events(queue_id):
         # Clean up when client disconnects
         if queue_id in session_queues:
             del session_queues[queue_id]
+import os
+from python_dotenv import load_dotenv
+
+load_dotenv()
 
 api_key = os.getenv("AZURE_OPENAI_API_KEY")
 api_version = os.getenv("AZURE_API_VERSION")

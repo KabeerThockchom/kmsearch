@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ExternalLink, ChevronDown, ChevronUp, Share2, X } from 'lucide-react';
 import type { SearchResponse, Source } from '../types';
+import { FeedbackForm } from './FeedbackForm';
 
 interface SearchResultsProps {
   result: SearchResponse['result'];
@@ -121,6 +122,9 @@ export function SearchResults({ result }: SearchResultsProps) {
             {renderContentWithLinkedCitations(result.content.answer)}
           </p>
         </div>
+
+        {/* Feedback Form */}
+        <FeedbackForm runId={result.run_id} />
       </div>
 
       {/* Detailed Explanation Section */}

@@ -16,6 +16,7 @@ export interface SearchResponse {
       reasoning: string;
     };
     sources: Source[];
+    run_id: string;
   };
 }
 

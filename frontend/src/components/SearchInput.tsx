@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Search, X, History } from 'lucide-react';
-
+import { Search, X } from 'lucide-react';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { SearchHistory } from '../types';
 
 interface SearchInputProps {
@@ -11,14 +11,12 @@ interface SearchInputProps {
 
 export function SearchInput({ onSearch, isLoading, searchHistory }: SearchInputProps) {
   const [query, setQuery] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim() && !isLoading) {
       onSearch(query.trim());
-      setShowHistory(false);
     }
   };
 
@@ -30,22 +28,28 @@ export function SearchInput({ onSearch, isLoading, searchHistory }: SearchInputP
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       clearSearch();
-      setShowHistory(false);
     }
   };
 
   const formatTimestamp = (timestamp: number) => {
+    const now = new Date();
     const date = new Date(timestamp);
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    }
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
     });
   };
 
   return (
-    <div className="w-full max-w-3xl">
+    <div className="w-full max-w-3xl space-y-3">
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
           <input
@@ -53,10 +57,8 @@ export function SearchInput({ onSearch, isLoading, searchHistory }: SearchInputP
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setShowHistory(true)}
-            onBlur={() => setTimeout(() => setShowHistory(false), 200)}
             onKeyDown={handleKeyDown}
-            placeholder="Search in natural language..."
+            placeholder="Ask about Vanguard's products, services, or investment strategies..."
             aria-label="Search query"
             className="w-full px-4 py-4 pr-24 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
             disabled={isLoading}
@@ -78,36 +80,35 @@ export function SearchInput({ onSearch, isLoading, searchHistory }: SearchInputP
             aria-label="Submit search"
           >
             <div className="relative flex items-center gap-1">
-              <Search className="w-6 h-6" />
+              <Search className="w-5 h-5" />
+              <AutoAwesomeIcon 
+                className="w-4 h-4 animate-simple-sparkle text-red-600"
+                style={{ fontSize: '1rem' }}
+              />
             </div>
           </button>
         </div>
       </form>
 
-      {searchHistory.length > 0 && showHistory && !query && (
-        <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200">
-          <div className="p-3 flex items-center gap-2 border-b border-gray-100">
-            <History className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-600">Previous Searches</span>
-          </div>
-          <ul className="py-1">
-            {searchHistory.map((item, index) => (
-              <li key={index}>
-                <button
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex justify-between items-center group"
-                  onClick={() => {
-                    setQuery(item.query);
-                    onSearch(item.query);
-                  }}
-                >
-                  <span className="text-gray-700">{item.query}</span>
-                  <span className="text-xs text-gray-400 group-hover:text-gray-600">
-                    {formatTimestamp(item.timestamp)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+      {searchHistory.length > 0 && !query && (
+        <div className="flex flex-wrap gap-2 px-1">
+          {searchHistory.map((item, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                setQuery(item.query);
+                onSearch(item.query);
+              }}
+              className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-full hover:border-red-200 hover:bg-red-50 transition-colors"
+            >
+              <span className="text-sm text-gray-600 group-hover:text-red-600 truncate max-w-[200px]">
+                {item.query}
+              </span>
+              <span className="text-xs text-gray-400 group-hover:text-red-500">
+                {formatTimestamp(item.timestamp)}
+              </span>
+            </button>
+          ))}
         </div>
       )}
     </div>

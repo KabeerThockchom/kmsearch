@@ -5,7 +5,6 @@ import { SearchResults } from './components/SearchResults';
 import { SearchProcess } from './components/SearchProcess';
 import { SearchResponse, SearchError, SearchHistory } from './types';
 import { v4 as uuidv4 } from 'uuid';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -75,18 +74,11 @@ function App() {
         <div className="flex flex-col items-center gap-8">
           {/* Hero Section */}
           <div className="text-center max-w-2xl">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4 inline-block relative">
-  Knowledge Search
-  <span className="absolute -top-5 right--0.5">
-    <AutoAwesomeIcon 
-      className="w-10 h-10 text-red-600"
-      style={{ fontSize: '1.2rem' }}
-    />
-  </span>
-</h1>
-
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Knowledge Search
+            </h1>
             <p className="text-lg text-gray-600">
-              Get instant answers about Vanguard's website.
+              Get instant answers about Vanguard's products, services, and investment strategies
             </p>
           </div>
 

@@ -17,6 +17,9 @@ import os
 # app = Flask(__name__)
 app = Flask(__name__, static_folder='dist')
 CORS(app)  # Enable CORS for cross-origin requests
+from langsmith import Client, traceable
+
+langsmith_client = Client()
 
 session_queues = {}
 
@@ -80,6 +83,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+from langsmith.wrappers import wrap_openai
 
 def get_azure_client():
     from openai import AzureOpenAI  # ensure fresh import in worker
@@ -95,7 +99,7 @@ def get_azure_client():
 def invoke_azure_openai(prompt: str, model: str = "gpt-4o-mini") -> str:
     """Invoke Azure OpenAI for inference."""
     log_step("Azure OpenAI Request", f"Model: {model}")
-    client = get_azure_client()
+    client = wrap_openai(get_azure_client())
     try:
         start_time = time.time()
         response = client.chat.completions.create(
@@ -114,11 +118,13 @@ def invoke_azure_openai(prompt: str, model: str = "gpt-4o-mini") -> str:
     except Exception as e:
         log_step("Azure OpenAI Error", f"Error: {str(e)}")
         return ""
+    
+from uuid import uuid4
 
 def invoke_azure_openai_generate(prompt: str, model: str = "gpt-4o") -> str:
     """Invoke Azure OpenAI for inference."""
     log_step("Azure OpenAI Request", f"Model: {model}")
-    client = get_azure_client()
+    client = wrap_openai(get_azure_client())
     try:
         start_time = time.time()
         response = client.chat.completions.create(
@@ -220,7 +226,10 @@ def query_coveo_api(query: str) -> Dict[str, Any]:
     except Exception as e:
         log_step("Coveo API Error", f"Error: {str(e)}")
         return {"results": []}
-
+    
+from langsmith import traceable
+  
+@traceable
 def parallel_retrieval(state: QueryState) -> Dict[str, Dict[str, List[Any]]]:
     """Retrieve results for multiple queries in parallel using Coveo."""
     log_step("Starting Parallel Retrieval", f"Processing {len(state['sub_queries'])} queries")
@@ -346,8 +355,11 @@ def generate_answer(state: QueryState) -> Dict[str, Dict[str, Any]]:
     """
 
     raw_answer = invoke_azure_openai_generate(prompt=prompt)
+
+    result = raw_answer
     print('raw_answer', raw_answer)
-    parsed_response = parse_llm_response(raw_answer)
+    
+    parsed_response = parse_llm_response(result)
     print('parsed response',parsed_response)
     # print('sources', sources)
 
@@ -357,7 +369,7 @@ def generate_answer(state: QueryState) -> Dict[str, Dict[str, Any]]:
             "answer": parsed_response["answer"],
             "reasoning": parsed_response["reasoning"]
         },
-        "sources": sources
+        "sources": sources,
     }
 
     return {"answer": structured_response}
@@ -402,6 +414,27 @@ def event_stream():
         }
     )
 
+@app.route('/feedback', methods=['POST'])
+def submit_feedback():
+    data = request.get_json()
+    run_id = data.get('run_id')
+    score = data.get('score')
+    comment = data.get('comment', '')
+    key = data.get('key', 'user-feedback')
+
+    if not run_id or score is None:
+        return jsonify({"error": "Missing run_id or score"}), 400
+
+    try:
+        langsmith_client.create_feedback(
+            run_id,
+            key=key,
+            score=score,
+            comment=comment
+        )
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/search', methods=['POST'])
 def handle_search():
@@ -444,6 +477,8 @@ def handle_search():
             return result
 
         # Update workflow with enhanced functions
+        from langchain import chat_models, prompts, callbacks
+
         workflow = StateGraph(QueryState)
         workflow.add_node("query_optimizer", enhanced_query_optimizer)
         workflow.add_node("parallel_retrieval", enhanced_parallel_retrieval)
@@ -463,15 +498,18 @@ def handle_search():
             retrieved_docs={},
             answer={}
         )
-
-        final_state = chain.invoke(initial_state)
+        with callbacks.collect_runs() as cb:
+            final_state = chain.invoke(initial_state)
+            run_id = cb.traced_runs[0].id
+        print(run_id)
 
         response = {
             "status": "success",
             "query": query,
             "result": {
                 "content": final_state["answer"]["content"],
-                "sources": final_state["answer"]["sources"]
+                "sources": final_state["answer"]["sources"],
+                "run_id": run_id,
             }
         }
 
@@ -484,6 +522,8 @@ def handle_search():
             "status": "error",
             "error": error_msg
         }), 500
+    
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000, debug=True)

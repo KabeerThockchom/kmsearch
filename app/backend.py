@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_from_directory
 from flask_cors import CORS
 import json
 import queue
@@ -13,16 +13,27 @@ import urllib3
 from datetime import datetime
 import re
 import os
-
-
 # Initialize Flask app
-app = Flask(__name__)
+# app = Flask(__name__)
+app = Flask(__name__, static_folder='dist')
 CORS(app)  # Enable CORS for cross-origin requests
+
 session_queues = {}
 
 def create_event_queue():
     return queue.Queue()
 
+@app.route('/')
+def serve_index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+    
 # Suppress SSL verification warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -70,20 +81,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-api_key = os.getenv("AZURE_OPENAI_API_KEY")
-api_version = os.getenv("AZURE_API_VERSION")
-azure_endpoint = os.getenv("AZURE_ENDPOINT")
+def get_azure_client():
+    from openai import AzureOpenAI  # ensure fresh import in worker
+    api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    api_version = os.getenv("AZURE_API_VERSION")
+    azure_endpoint = os.getenv("AZURE_ENDPOINT")
+    return AzureOpenAI(api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint)
+
 
 # Azure OpenAI Setup
-client = AzureOpenAI(
-    api_key=api_key,
-    api_version=api_version,
-    azure_endpoint=azure_endpoint
-)
+
 
 def invoke_azure_openai(prompt: str, model: str = "gpt-4o-mini") -> str:
     """Invoke Azure OpenAI for inference."""
     log_step("Azure OpenAI Request", f"Model: {model}")
+    client = get_azure_client()
     try:
         start_time = time.time()
         response = client.chat.completions.create(
@@ -106,6 +118,7 @@ def invoke_azure_openai(prompt: str, model: str = "gpt-4o-mini") -> str:
 def invoke_azure_openai_generate(prompt: str, model: str = "gpt-4o") -> str:
     """Invoke Azure OpenAI for inference."""
     log_step("Azure OpenAI Request", f"Model: {model}")
+    client = get_azure_client()
     try:
         start_time = time.time()
         response = client.chat.completions.create(
@@ -473,4 +486,4 @@ def handle_search():
         }), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=10000, debug=True)

@@ -1,0 +1,24 @@
+app = "vgkmpoc"
+
+[build]
+    dockerfile = "Dockerfile"
+
+[env]
+    PORT = "10000"
+    AZURE_OPENAI_API_KEY = "bc69e0fef47a48c187ec624f23c2bce7"
+    AZURE_API_VERSION = "2024-02-15-preview"
+    AZURE_ENDPOINT = "https://eyvoicecentralus.openai.azure.com/"
+
+[[services]]
+    internal_port = 10000
+    protocol = "tcp"
+    processes = ["app"]
+
+    [[services.ports]]
+        port = 80
+        handlers = ["http"]
+        force_https = true
+
+    [[services.ports]]
+        port = 443
+        handlers = ["tls", "http"]

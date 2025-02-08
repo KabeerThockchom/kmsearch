@@ -27,7 +27,7 @@ export function SearchProcess({ sessionId, isSearching }: SearchProcessProps) {
   useEffect(() => {
     if (!isSearching || !sessionId) return;
 
-    const eventSource = new EventSource(`http://localhost:8000/stream?id=${sessionId}`);
+    const eventSource = new EventSource(`https://vgkmpoc.fly.dev/stream?id=${sessionId}`);
     
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);

@@ -1,0 +1,6 @@
+python_dotenv
+lanchain
+langgraph
+openai
+flask_cors
+flask

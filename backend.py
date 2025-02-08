@@ -66,7 +66,7 @@ def stream_events(queue_id):
         if queue_id in session_queues:
             del session_queues[queue_id]
 import os
-from python_dotenv import load_dotenv
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -163,7 +163,7 @@ def query_optimizer(state: QueryState) -> Dict[str, List[str]]:
     Query: {state['original_query']}
     """
     response = invoke_azure_openai(prompt=structured_llm_prompt)
-    sub_queries = [q.strip() for q in response.strip().split("\n") if q.strip()][:3]
+    sub_queries = [q.strip() for q in response.strip().split("\n") if q.strip()][:5]
 
     log_step("Sub-queries Generated", f"Sub-queries: {sub_queries}")
     return {"sub_queries": sub_queries}

@@ -8,6 +8,10 @@ app = "vgkmpoc"
     AZURE_OPENAI_API_KEY = "bc69e0fef47a48c187ec624f23c2bce7"
     AZURE_API_VERSION = "2024-02-15-preview"
     AZURE_ENDPOINT = "https://eyvoicecentralus.openai.azure.com/"
+    LANGSMITH_API_KEY= "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"
+    LANGSMITH_TRACING= "true"
+    LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
+    LANGSMITH_PROJECT="vgkmpoc"
 
 [[services]]
     internal_port = 10000

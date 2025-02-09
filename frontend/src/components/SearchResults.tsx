@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ExternalLink, ChevronDown, ChevronUp, Share2, X } from 'lucide-react';
 import type { SearchResponse, Source } from '../types';
 import { FeedbackForm } from './FeedbackForm';
@@ -9,11 +9,10 @@ interface SearchResultsProps {
 
 interface SourcePreviewProps {
   source: Source;
-  onClose: () => void;
+  position?: { x: number; y: number };
 }
 
-function SourcePreview({ source, onClose }: SourcePreviewProps) {
-  // Function to truncate text to a specific word limit
+function SourcePreview({ source, position }: SourcePreviewProps) {
   const truncateText = (text: string, wordLimit: number) => {
     const words = text.split(' ');
     if (words.length > wordLimit) {
@@ -22,18 +21,21 @@ function SourcePreview({ source, onClose }: SourcePreviewProps) {
     return text;
   };
 
+  const style: React.CSSProperties = position
+    ? {
+        position: 'fixed',
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        transform: 'translate(10px, -50%)',
+      }
+    : {};
+
   return (
-    <div className="absolute z-20 w-96 bg-white rounded-lg shadow-xl border border-gray-200 p-4">
-      <div className="flex justify-between items-start mb-2">
-        <h4 className="font-medium text-gray-900">{source.title}</h4>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600"
-          aria-label="Close preview"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+    <div 
+      className="z-50 w-96 bg-white rounded-lg shadow-xl border border-gray-200 p-4"
+      style={style}
+    >
+      <h4 className="font-medium text-gray-900 mb-2">{source.title}</h4>
       {source.date && (
         <p className="text-sm text-gray-500 mb-2">
           Published: {new Date(source.date).toLocaleDateString()}
@@ -57,11 +59,24 @@ function SourcePreview({ source, onClose }: SourcePreviewProps) {
 
 export function SearchResults({ result }: SearchResultsProps) {
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
-  const [activeSourceId, setActiveSourceId] = useState<number | null>(null);
+  const [previewSource, setPreviewSource] = useState<{
+    source: Source;
+    position?: { x: number; y: number };
+  } | null>(null);
 
-  const handleCitation = (sourceId: number, event: React.MouseEvent) => {
-    event.preventDefault();
-    setActiveSourceId(activeSourceId === sourceId ? null : sourceId);
+  const handleMouseEnter = (source: Source, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPreviewSource({
+      source,
+      position: {
+        x: rect.right,
+        y: rect.top + rect.height / 2,
+      },
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setPreviewSource(null);
   };
 
   const handleShare = async () => {
@@ -77,11 +92,9 @@ export function SearchResults({ result }: SearchResultsProps) {
   };
 
   const renderContentWithLinkedCitations = (content: string) => {
-    // Split content by citation pattern [n]
     const parts = content.split(/(\[\d+\])/g);
     
     return parts.map((part, index) => {
-      // Check if part is a citation
       const citationMatch = part.match(/\[(\d+)\]/);
       if (citationMatch) {
         const sourceId = parseInt(citationMatch[1], 10);
@@ -91,7 +104,8 @@ export function SearchResults({ result }: SearchResultsProps) {
           return (
             <button
               key={index}
-              onClick={(e) => handleCitation(sourceId, e)}
+              onMouseEnter={(e) => handleMouseEnter(source, e)}
+              onMouseLeave={handleMouseLeave}
               className="text-red-600 hover:text-red-800 font-medium cursor-pointer"
             >
               {part}
@@ -159,7 +173,8 @@ export function SearchResults({ result }: SearchResultsProps) {
             <div key={source.id} className="relative border-b border-gray-100 last:border-0 pb-4 last:pb-0">
               <div className="flex items-start justify-between gap-4">
                 <button
-                  onClick={(e) => handleCitation(source.id, e)}
+                  onMouseEnter={(e) => handleMouseEnter(source, e)}
+                  onMouseLeave={handleMouseLeave}
                   className="font-medium text-gray-900 text-left hover:text-red-600"
                 >
                   [{source.id}] {source.title}
@@ -174,16 +189,18 @@ export function SearchResults({ result }: SearchResultsProps) {
                   <span>View</span>
                 </a>
               </div>
-              {activeSourceId === source.id && (
-                <SourcePreview
-                  source={source}
-                  onClose={() => setActiveSourceId(null)}
-                />
-              )}
             </div>
           ))}
         </div>
       </div>
+
+      {/* Floating Source Preview */}
+      {previewSource && (
+        <SourcePreview
+          source={previewSource.source}
+          position={previewSource.position}
+        />
+      )}
     </div>
   );
 }
